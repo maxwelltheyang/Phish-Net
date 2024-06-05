@@ -1,1 +1,1 @@
-# Phish-Net
+# Go-Phish
