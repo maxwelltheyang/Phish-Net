@@ -13,17 +13,17 @@ Gmail's spam filtration method does not seem robust enough, I still get many ema
 6) Email is moved to spam if there is a link deemed "phishing" in the contents of the email"
 
 ## File descriptions
-Phishing Website Features.docx- All of the features extracted from a link and what they mean<br />
-phishing-domains.txt- A list of the most common phishing domains, used in process_email<br />
-phishing_ml.h5- Saved ML model<br />
-process_email.py- A local version of the cloud function, extracts email contents, obtain email attributes, run attributes with ML model, delete email if deemed "phishing"<br />
-process_email_gcloud.py- Same as previous file but uses Cloud Buckets instead of local files for Google Cloud use<br />
-save_token.py- Create OAuth2 Authentication token to allow Gmail API to access the user's inbox<br />
-scaler.save- Saved scaler file for the ML model<br />
-top-100000-domains.txt- Top 100,000 most popular website domains from Alexa, used in process_email<br />
-top-1000000-domains.txt- Top 1,000,000 most popular website domains from Alexa, used in process_email<br />
-uci-ml.py- Machine learning model created using supervised machine learning with neural networks (Scikit Learn)<br />
-watch_email-useracc.py- Script that sets up a watch on the user's inbox to notify the pub/sub when there is an incoming email. <br />
+Phishing Website Features.docx- All of the features extracted from a link and what they mean<br /><br />
+phishing-domains.txt- A list of the most common phishing domains, used in process_email<br /><br />
+phishing_ml.h5- Saved ML model<br /><br />
+process_email.py- A local version of the cloud function, extracts email contents, obtain email attributes, run attributes with ML model, delete email if deemed "phishing"<br /><br />
+process_email_gcloud.py- Same as previous file but uses Cloud Buckets instead of local files for Google Cloud use<br /><br />
+save_token.py- Create OAuth2 Authentication token to allow Gmail API to access the user's inbox<br /><br />
+scaler.save- Saved scaler file for the ML model<br /><br />
+top-100000-domains.txt- Top 100,000 most popular website domains from Alexa, used in process_email<br /><br />
+top-1000000-domains.txt- Top 1,000,000 most popular website domains from Alexa, used in process_email<br /><br />
+uci-ml.py- Machine learning model created using supervised machine learning with neural networks (Scikit Learn)<br /><br />
+watch_email-useracc.py- Script that sets up a watch on the user's inbox to notify the pub/sub when there is an incoming email. <br /><br />
 
 ## Experience gained
 I learned to work with many RESTful APIs, including Google Search, Gmail, and PageRank API. Many of the link attributes looked at the html contents of the website, such as favicon, external domains, and redirect links. I learned basic HTML and how to extract features uses request. Regular expressions were used to determine what an email pattern was like and how to extract only the links from an email. Used Google Cloud to automate the entire process, so I learned how to use Google Cloud Functions, Cloud Buckets, and Secret Manager to manage secrets such as API keys. 
