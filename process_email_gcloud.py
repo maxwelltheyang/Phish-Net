@@ -6,6 +6,7 @@ import json
 import os
 from googleapiclient.discovery import build
 from google.cloud import secretmanager
+from google.cloud import storage
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 import re
