@@ -1,4 +1,7 @@
-# Sets up a watch for the pub/sub to trigger the cloud function when there is a new email in my inbox
+"""
+watch_email-useracc.py
+Sets up a watch for the pub/sub to trigger the cloud function when there is a new email in my inbox
+"""
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -23,6 +26,11 @@ client_config = {
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/pubsub', 'https://www.googleapis.com/auth/cloud-platform']
 
 def setup_watch():
+    """
+    Creates a watch to trigger the pub/sub on arrival of new email
+    Params: none
+    Returns: none
+    """
     flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
     credentials = flow.run_local_server(port=8080)
     service = build('gmail', 'v1', credentials=credentials)

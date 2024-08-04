@@ -1,5 +1,7 @@
-# Creates authentication token using OAuth2 for the user and saves their credentials to allow gmail API to access their mailbox and its contents
-
+"""
+save_token.py
+Loads secret value into secret manager
+"""
 import os
 import json
 from google.oauth2.credentials import Credentials

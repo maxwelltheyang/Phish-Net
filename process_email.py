@@ -1,4 +1,7 @@
-# This is the local version. Will not work on gcloud.
+"""
+process_email.py
+This is the local version of process email. Will not work on gcloud.
+"""
 
 import base64
 #import functions_framework
@@ -6,6 +9,7 @@ import json
 import os
 from googleapiclient.discovery import build
 from google.cloud import secretmanager
+from google.cloud import storage
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 import re
@@ -22,7 +26,11 @@ from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 import joblib
 import numpy as np
+import pydoc
 
+"""
+Load API keys from secret environment
+"""
 client = secretmanager.SecretManagerServiceClient()
 response = client.access_secret_version(request={"name": "projects/mystic-span-415322/secrets/AUTH_TOKEN/versions/latest"})
 AUTH_TOKEN = response.payload.data.decode("UTF-8")
@@ -32,7 +40,13 @@ response_3 = client.access_secret_version(request={"name": "projects/mystic-span
 OPEN_SEARCH = response_3.payload.data.decode("UTF-8")
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
+
 def create_service():
+    """
+    Obtain authorization from gmail API and create a service to read and write emails
+    Params: none
+    Returns: created service instance
+    """
     global SCOPES, AUTH_TOKEN
     credentials = Credentials.from_authorized_user_info(json.loads(AUTH_TOKEN), SCOPES)
     if not credentials or not credentials.valid:
@@ -45,7 +59,32 @@ def create_service():
     service = build('gmail', 'v1', credentials=credentials)
     return service
 
+
+def upload_files():
+    """
+    Load in files from google cloud
+    Params: none
+    Returns: none
+    """
+    storage_client = storage.Client()
+    bucket = storage_client.bucket('phish-files')
+    ml = bucket.blob('phishing_ml.h5')
+    ml.download_to_filename('/tmp/phishing_ml.h5')
+    domains = bucket.blob('phishing-domains.txt')
+    domains.download_to_filename('/tmp/phishing-domains.txt')
+    scaler = bucket.blob('scaler.save')
+    scaler.download_to_filename('/tmp/scaler.save')
+    dom1 = bucket.blob('top-100000-domains.txt')
+    dom1.download_to_filename('/tmp/top-100000-domains.txt')
+    dom2 = bucket.blob('top-1000000-domains.txt')
+    dom2.download_to_filename('/tmp/top-1000000-domains.txt')
+
 def normalize_url(url):
+    """
+    Turns raw url into urlparse object
+    Params: raw url
+    Returns: urlparse object
+    """
     parsed_url = urlparse(url.lower())
     if parsed_url.scheme == '':
         new_netloc = parsed_url.path
@@ -54,6 +93,11 @@ def normalize_url(url):
     return parsed_url
 
 def port_status(host, port):
+    """
+    Checks to see if a specific port exists
+    Params: website domain name, port number
+    Returns: 0 if port closed, 1 if port is open
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(1)
     try:
@@ -66,10 +110,20 @@ def port_status(host, port):
         sock.close()
 
 def extract_domain(url):
+    """
+    Obtains the domain from a urlparse object
+    Params: urlparse object
+    Returns: url domain as string
+    """
     parsed_url = tldextract.extract(url)
     return f"{parsed_url.domain}.{parsed_url.suffix}"
 
 def calculate_external(url, html):
+    """
+    Calculates number of external objects in a website's HTML
+    Params: urlparse object, html of the website
+    Returns: percentage of external objects
+    """
     page_domain = extract_domain(url)
     external_objects = 0
     total_objects = 0
@@ -98,6 +152,11 @@ def calculate_external(url, html):
     return (external_objects / total_objects) + 0.0
 
 def calculate_anchor(url,html):
+    """
+    Calculates number of external links in webpage anchors
+    Params: urlparse object, html of the website
+    Returns: percentage of external links
+    """
     page_domain = extract_domain(url)
     external_objects = 0
     total_objects = 0
@@ -116,6 +175,11 @@ def calculate_anchor(url,html):
     return (external_objects / total_objects) + 0.0
 
 def calculate_metadata(url, html):
+    """
+    Calculates number of external links in meta, script, and link tags
+    Params: urlparse object, html of the website
+    Returns: percentage of external links
+    """
     page_domain = extract_domain(url)
     external_objects = 0
     total_objects = 0
@@ -140,6 +204,11 @@ def calculate_metadata(url, html):
     return (external_objects / total_objects) + 0.0
 
 def calculate_sfh(url, html):
+    """
+    Check legitimacy of SFH 
+    Params: urlparse object, html of the website
+    Returns: list of SFH status for each tag, 1 if about:blank, 0 if external domain, 1 if same domain
+    """
     page_domain = extract_domain(url)
     soup = BeautifulSoup(html, 'html.parser')
     tags = soup.find_all(['form'])
@@ -158,6 +227,11 @@ def calculate_sfh(url, html):
     return results
 
 def check_mailto(html):
+    """
+    Check existence of mailto in website HTML
+    Params: html of the website
+    Returns: 1 if mailto: exits, -1 otherwise
+    """
     soup = BeautifulSoup(html, 'html.parser')
     mailto_links = soup.find_all('a', href=True)
     for link in mailto_links:
@@ -166,6 +240,11 @@ def check_mailto(html):
     return -1
 
 def mouse_over(html):
+    """
+    Check if status bar changes on mouseover
+    Params: html of the website
+    Returns: -1 if it doesn't change, 1 otherwise
+    """
     soup = BeautifulSoup(html, 'html.parser')
     elements_with_onmouseover = soup.find_all(onmouseover=True)
     for element in elements_with_onmouseover:
@@ -175,6 +254,11 @@ def mouse_over(html):
     return -1
 
 def right_click(html):
+    """
+    Check if right click is disabled
+    Params: html of the website
+    Returns: 1 if right click is disabled, -1 otherwise
+    """
     soup = BeautifulSoup(html, 'html.parser')
     scripts = soup.find_all('script')
     for script in scripts:
@@ -188,6 +272,11 @@ def right_click(html):
     return -1
 
 def check_popups(html):
+    """
+    Check if text fields are in popups
+    Params: html of the website
+    Returns: 1 if text fields exist, -1 otherwise
+    """
     soup = BeautifulSoup(html, 'html.parser')
     scripts = soup.find_all('script')
     for script in scripts:
@@ -198,6 +287,11 @@ def check_popups(html):
     return -1
 
 def get_dns_records(domain):
+    """
+    Try to obtain DNS record of the website
+    Params: domain of the website
+    Returns: -1 if DNS records were found, 1 otherwise
+    """
     try:
         answers = dns.resolver.resolve(domain, 'A')
         if answers:
@@ -210,11 +304,16 @@ def get_dns_records(domain):
         return 1
     
 def get_top_websites(url):
-    with open('top-100000-domains.txt', 'r') as file:
+    """
+    Check if a website is in the top 100,000 or top 1,000,000 domains
+    Params: url of the website
+    Returns: -1 if domain in top 100,000, 0 if domain in top 1,000,000, 1 otherwise
+    """
+    with open('/tmp/top-100000-domains.txt', 'r') as file:
         file_content = file.read()
         if url in file_content:
             return -1
-    with open('top-1000000-domains.txt', 'r') as file:
+    with open('/tmp/top-1000000-domains.txt', 'r') as file:
         file_content = file.read()
         if url in file_content:
             return 0
@@ -222,6 +321,11 @@ def get_top_websites(url):
             return 1
         
 def get_page_rank(domain):
+    """
+    Obtain the page rank of the website
+    Params: domain of the website
+    Returns: page rank of the wesbite
+    """
     url = f"https://openpagerank.com/api/v1.0/getPageRank?domains[]={domain}"
     headers = {
         'API-OPR': PAGERANK_API
@@ -232,6 +336,11 @@ def get_page_rank(domain):
     return data["response"][0]["page_rank_decimal"], data['response'][0].get('rank', 0)
 
 def get_google_index(url):
+    """
+    Check if website domain is in Google's OpenSearch 
+    Params: url of the website
+    Returns: -1 if the website exists, 1 otherwise
+    """
     cx = '44f8c8f81b8754070'
     search_url = f"https://www.googleapis.com/customsearch/v1?q=site:{url}&key={OPEN_SEARCH}&cx={cx}"
     try:
@@ -244,7 +353,12 @@ def get_google_index(url):
         return 1
 
 def check_phish(url):
-    with open('phishing-domains.txt', 'r') as file:
+    """
+    Check if website is listed in a phishing domain database
+    Params: url of the website
+    Returns: 1 if url exists, -1 otherwise
+    """
+    with open('/tmp/phishing-domains.txt', 'r') as file:
         file_content = file.read()
         if url in file_content:
             return 1
@@ -252,9 +366,11 @@ def check_phish(url):
             return -1
         
 def extract_attributes(url):
-    # 1 is considered phishing
-    # 0 is considered suspicious
-    # -1 is considered legitimate 
+    """
+    Obtain attributes for each phishing feature
+    Params: url of the website
+    Returns: dictionary of each attribute, -1 if safe, 0 if suspicious, 1 if phishing
+    """
     attributes = {}
     raw_url = urlunparse(url)
     ip_pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
@@ -338,6 +454,11 @@ def extract_attributes(url):
     return attributes
 
 def predict_data(attribute, model, scaler):
+    """
+    Runs machine learning model and checks if the website is phishing
+    Params: list of phishing attributes, ML model, ML scaler
+    Returns: -1 if safe, 0 if suspicious, 1 if phishing
+    """
     new_data = np.array(list(attribute.values()))
     #print(new_data)
     if new_data.ndim == 1:
@@ -348,6 +469,12 @@ def predict_data(attribute, model, scaler):
     return predicted_classes
 
 def process_email():
+    """
+    Obtains the most recent email in inbox and checks all links for phishing
+    Params: none
+    Returns: list of categorizations for each website, -1 if safe, 0 if suspicious, 1 if phishing
+    """
+    upload_files()
     service = create_service()
     result = service.users().messages().list(userId='me', maxResults=1, q="").execute()
     messages = result.get('messages', [])
@@ -368,16 +495,14 @@ def process_email():
     print(urls)
     parsed_urls = [normalize_url(url) for url in urls]
     attributes = [extract_attributes(url) for url in parsed_urls]
-    model = load_model('phishing_ml.h5')
-    scaler = joblib.load('scaler.save')
+    model = load_model('/tmp/phishing_ml.h5')
+    scaler = joblib.load('/tmp/scaler.save')
     data = [predict_data(attribute, model, scaler) for attribute in attributes]
     print(data)
     if any(np.any(arr == 1) for arr in data):
         service.users().messages().modify(userId='me', id=email_id, body={'addLabelIds': ['SPAM'], 'removeLabelIds': []}).execute()
         print("email with phishing link moved to spam succesfully")
     return data
-
-    
 
 # @functions_framework.cloud_event
 # def hello_pubsub(cloud_event):
@@ -395,4 +520,6 @@ def process_email():
 # print(predict_data(attr, model, scaler))
 # print(attr)
 # print(len(attr))
-process_email()
+#process_email()
+
+pydoc.writedoc('process_email.py')

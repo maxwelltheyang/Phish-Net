@@ -1,4 +1,7 @@
-#Supervised machine learning using neural networks to determine if a link in an email is phishing or not
+"""
+uci-ml.py
+Supervised ML model creator, takes data from UCI training dataset
+"""
 
 from ucimlrepo import fetch_ucirepo
 from sklearn.model_selection import train_test_split
